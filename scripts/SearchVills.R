@@ -1,4 +1,4 @@
-setwd("/Users/matthewcooper/R workspace")
+setwd("/Users/matthewcooper/Creativitea/village-names/")
 
 #libraries for functions
 library(stringr)
@@ -13,21 +13,21 @@ library(geosphere)
 library(ape)
 
 ##Read in text files for all countries
-BF <- read.delim('BF.txt', header=F)
-CI <- read.delim('CI.txt', header=F)
-GN <- read.delim('GN.txt', header=F)
-GW <- read.delim('GW.txt', header=F)
-LR <- read.delim('LR.txt', header=F)
-MR <- read.delim('MR.txt', header=F)
-NE <- read.delim('NE.txt', header=F)
-SL <- read.delim('SL.txt', header=F)
-SN <- read.delim('SN.txt', header=F)
-ML <- read.delim('ML.txt', header=F)
-NG <- read.delim('NG.txt', header=F)
-GM <- read.delim('GM.txt', header=F)
-TG <- read.delim('TG.txt', header=F)
-BJ <- read.delim('BJ.txt', header=F)
-GH <- read.delim('GH.txt', header=F)
+BF <- read.delim('Toponyms/BF.txt', header=F)
+CI <- read.delim('Toponyms/CI.txt', header=F)
+GN <- read.delim('Toponyms/GN.txt', header=F)
+GW <- read.delim('Toponyms/GW.txt', header=F)
+LR <- read.delim('Toponyms/LR.txt', header=F)
+MR <- read.delim('Toponyms/MR.txt', header=F)
+NE <- read.delim('Toponyms/NE.txt', header=F)
+SL <- read.delim('Toponyms/SL.txt', header=F)
+SN <- read.delim('Toponyms/SN.txt', header=F)
+ML <- read.delim('Toponyms/ML.txt', header=F)
+NG <- read.delim('Toponyms/NG.txt', header=F)
+GM <- read.delim('Toponyms/GM.txt', header=F)
+TG <- read.delim('Toponyms/TG.txt', header=F)
+BJ <- read.delim('Toponyms/BJ.txt', header=F)
+GH <- read.delim('Toponyms/GH.txt', header=F)
 
 #Rename all the coulumns
 x <- c('geonameid','name','asciiname','alternatenames','latitude','longitude','feature_class','feature_code','country_code','cc2','admin1_code','admin2_code','admin3_code','admin4_code','population','elevation','dem','timezone','modification date')
@@ -71,31 +71,14 @@ geonames <- rbind(ML,BF,CI,GN,GW,LR,MR,NE,SL,SN,NG,TG,BJ,GH,GM)
 vills <- geonames[geonames$feature_class=='P',]
 
 #Read in orthography-normalized villages
-new <- read.delim('fixvills.txt', header=FALSE, sep='$')
+new <- read.delim('data/fixvills.txt', header=FALSE, sep='$')
 #Because I added $$$ to them in python as a delimitter, only the first column is added to vills
 names(new) <- c('a','b')
 vills$standname <- new$a
 
-#convert all toponyms to one case
-#vills$asciiname <- toupper(vills$asciiname)
-
-#Select unique names
-#nameselect <- vills[,c(3,20)]
-#unique <- duplicated(nameselect)
-#vills <- vills[!unique,c(3,5,6,20)]
-
 coordselect <- vills[,2:3]
 unique <- duplicated(coordselect)
 vills <- vills[!unique,]
-
-#map population density
-#can also sumbmit query '' to one of the villsearch functions
-"m <- matrix(c(vills$longitude,vills$latitude),ncol=2)
-r <- raster(ncols=34*5, nrows=19*5, xmn=-18,xmx=16,ymn=4,ymx=27)
-popdensity <- rasterize(m, r, fun=function(x,...)length(x))
-plot(popdensity)
-map(database='world',regions=c('Senegal','Guinea-Bissau','Guinea','Liberia','Sierra Leone','Ivory Coast','Niger','Mauritania','Burkina Faso','Mali','Gambia','Ghana','Benin','Togo'),xlim=c(-18,16),ylim=c(4,27), add=TRUE)
-"
 
 
 #map villages by search string with raster
