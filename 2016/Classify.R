@@ -1,17 +1,18 @@
-setwd('/Users/matthewcooper/Creativitea/village-names/JustMali')
+setwd('/Users/matthewcooper/Creativitea/village-names/2016/')
 
 library(dplyr)
+library(rgdal)
 
 ##################
 ### Read in Data & Prep names
 ##################
 
-ML <- read.delim('ML.txt', stringsAsFactors = F)
+DAT <- read.delim('ML.txt', stringsAsFactors = F)
 x <- c('geonameid','name','asciiname','alternatenames','latitude','longitude','feature_class','feature_code','country_code','cc2','admin1_code','admin2_code','admin3_code','admin4_code','population','elevation','dem','timezone','modification date')
-names(ML) <- x
+names(DAT) <- x
 
 #Select villages, cities, towns, etc, leaving out universities, forests, etc
-ML <- ML[ML$feature_class=='P', ]
+DAT <- DAT[DAT$feature_class=='P', ]
 
 indexCapitalize <- function(str, index){
   if (index==1){
@@ -42,7 +43,9 @@ makeLastUpper <- function(str){
   return(newStr)
 }
 
-ML$NamE <- sapply(ML$asciiname, makeLastUpper)
+DAT$NamE <- sapply(DAT$asciiname, makeLastUpper)
+
+DAT <- DAT[ , c('NamE', 'latitude', 'longitude')] %>% unique
                  
 ################
 ###Get 3-grams
@@ -53,24 +56,29 @@ getThreeGrams <- function(str){
   mapply(substr, start=1:(len-2), stop=3:len, x=str)
 }
 
-threeGrams <- sapply(ML$NamE, getThreeGrams) %>% unlist %>% unique
+threeGrams <- sapply(DAT$NamE, getThreeGrams) %>% unlist %>% unique
 
 ######################
 ###Get Binary Matrix
 ######################
 
-binmat <- sapply(threeGrams,grepl,ML$NamE)
+binmat <- sapply(threeGrams,grepl,DAT$NamE)
 
-row.names(binmat) <- ML$NamE
+row.names(binmat) <- DAT$NamE
 
 #######################
 ###Select only Variables with significant spatial clustering
 #######################
+coordinates(DAT) <- c('longitude', 'latitude')
+proj4string(DAT) <- CRS("+proj=longlat +datum=WGS84")
+DAT <- spTransform(DAT, CRS("+proj=aeqd +lat_0=0 +lon_0=-0"))
 
-inverseDistMat <- 1/as.matrix(dist(binmat[ , c('longitude', 'latitude')]))
+inverseDistMat <- 1/as.matrix(dist(DAT@coords))
 diag(inverseDistMat) <- 0
+inverseDistMat[is.infinite(inverseDistMat)] <- 0
 
-getMorans <- function(gram, binmat){
-  Moran.I(binm
-  
+##To do - rewrite Moran.I so that all the binmat cv stuff is only calculated once
+
+getMorans <- function(gram, mat){
+  Moran.I(as.numeric(binmat[ ,gram]),inverseDistMat)
 
