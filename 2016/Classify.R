@@ -2,17 +2,18 @@ setwd('/Users/matthewcooper/Creativitea/village-names/2016/')
 
 library(dplyr)
 library(rgdal)
+library(randomForest)
 
 ##################
 ### Read in Data & Prep names
 ##################
 
-DAT <- read.delim('ML.txt', stringsAsFactors = F)
+vills <- read.delim('ML.txt', stringsAsFactors = F)
 x <- c('geonameid','name','asciiname','alternatenames','latitude','longitude','feature_class','feature_code','country_code','cc2','admin1_code','admin2_code','admin3_code','admin4_code','population','elevation','dem','timezone','modification date')
-names(DAT) <- x
+names(vills) <- x
 
 #Select villages, cities, towns, etc, leaving out universities, forests, etc
-DAT <- DAT[DAT$feature_class=='P', ]
+vills <- vills[vills$feature_class=='P', ]
 
 indexCapitalize <- function(str, index){
   if (index==1){
@@ -43,9 +44,9 @@ makeLastUpper <- function(str){
   return(newStr)
 }
 
-DAT$NamE <- sapply(DAT$asciiname, makeLastUpper)
+vills$NamE <- sapply(vills$asciiname, makeLastUpper)
 
-DAT <- DAT[ , c('NamE', 'latitude', 'longitude')] %>% unique
+vills <- vills[ , c('NamE', 'latitude', 'longitude')] %>% unique
                  
 ################
 ###Get 3-grams
@@ -56,29 +57,70 @@ getThreeGrams <- function(str){
   mapply(substr, start=1:(len-2), stop=3:len, x=str)
 }
 
-threeGrams <- sapply(DAT$NamE, getThreeGrams) %>% unlist %>% unique
+threeGrams <- sapply(vills$NamE, getThreeGrams) %>% unlist %>% unique
 
 ######################
 ###Get Binary Matrix
 ######################
 
-binmat <- sapply(threeGrams,grepl,DAT$NamE)
+binmat <- sapply(threeGrams,grepl,vills$NamE)
 
-row.names(binmat) <- DAT$NamE
+row.names(binmat) <- vills$NamE
 
 #######################
 ###Select only Variables with significant spatial clustering
 #######################
-coordinates(DAT) <- c('longitude', 'latitude')
-proj4string(DAT) <- CRS("+proj=longlat +datum=WGS84")
-DAT <- spTransform(DAT, CRS("+proj=aeqd +lat_0=0 +lon_0=-0"))
+coordinates(vills) <- c('longitude', 'latitude')
+proj4string(vills) <- CRS("+proj=longlat +datum=WGS84")
+vills <- spTransform(vills, CRS("+proj=aeqd +lat_0=0 +lon_0=-0"))
 
-inverseDistMat <- 1/as.matrix(dist(DAT@coords))
-diag(inverseDistMat) <- 0
-inverseDistMat[is.infinite(inverseDistMat)] <- 0
+weight <- 1/as.matrix(dist(vills@coords))
+diag(weight) <- 0
+weight[is.infinite(weight)] <- 0
 
-##To do - rewrite Moran.I so that all the binmat cv stuff is only calculated once
+ROWSUM <- rowSums(weight)
+ROWSUM[ROWSUM == 0] <- 1
+weight <- weight/ROWSUM
+s <- sum(weight)
+s.sq <- s^2
+S1 <- 0.5 * sum((weight + t(weight))^2)
+S2 <- sum((apply(weight, 1, sum) + apply(weight, 2, sum))^2)
 
-getMorans <- function(gram, mat){
-  Moran.I(as.numeric(binmat[ ,gram]),inverseDistMat)
+rm(ROWSUM)
+
+source("Moran.I.Alt.R")
+
+clustering <- lapply(X = colnames(binmat), FUN = Moran.I.Alt, binmat=binmat, weight=weight, S1=S1, S2=S2, s.sq=s.sq) %>% bind_rows
+
+write.csv(clustering, '3-gram MoransI.csv', row.names=F)
+
+spatial_grams <- clustering$gram[clustering$p.value < 0.05]
+
+binmatsel <- binmat[ , colnames(binmat) %in% spatial_grams]
+
+binmatselsamp <- binmatsel[sample(1:nrow(binmatsel), 1000, replace=F), ]
+
+distmat <- dist(binmatsel, method='binary')
+
+#http://stats.stackexchange.com/questions/70113/cluster-large-boolean-dataset
+
+
+rc <- dist(x = binmatsel, method="binary")
+
+rockmod1 <- rockCluster(binmatsel, 1, beta = 0.9, theta = 0.99, fun = "dist", funArgs = list(method="binary"), debug = FALSE)
+
+
+vills$clust <- rockmod$cl
+
+multiclust <- table(rockmod$cl)[table(rockmod$cl) > 1]
+
+vills$multiclust <- vills$clust %in% names(multiclust)
+
+sub <- vills[vills$multiclust, ]
+
+plot(sub$longitude, sub$latitude, col=sub$clust)
+
+
+
+
 
