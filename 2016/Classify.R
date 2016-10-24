@@ -47,7 +47,7 @@ makeLastUpper <- function(str){
 vills$NamE <- sapply(vills$asciiname, makeLastUpper)
 
 vills <- vills[ , c('NamE', 'latitude', 'longitude')] %>% unique
-                 
+
 ################
 ###Get 3-grams
 ###############
@@ -98,14 +98,11 @@ spatial_grams <- clustering$gram[clustering$p.value < 0.05]
 
 binmatsel <- binmat[ , colnames(binmat) %in% spatial_grams]
 
-binmatselsamp <- binmatsel[sample(1:nrow(binmatsel), 1000, replace=F), ]
-
-distmat <- dist(binmatsel, method='binary')
+############################
+###Classify Using ROCK Model
+############################
 
 #http://stats.stackexchange.com/questions/70113/cluster-large-boolean-dataset
-
-
-rc <- dist(x = binmatsel, method="binary")
 
 rockmod1 <- rockCluster(binmatsel, 1, beta = 0.9, theta = 0.99, fun = "dist", funArgs = list(method="binary"), debug = FALSE)
 
