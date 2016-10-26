@@ -2,7 +2,6 @@ setwd('/Users/matthewcooper/Creativitea/village-names/2016/')
 
 library(dplyr)
 library(rgdal)
-library(randomForest)
 
 ##################
 ### Read in Data & Prep names
@@ -104,6 +103,8 @@ binmatsel <- binmat[ , colnames(binmat) %in% spatial_grams]
 
 #http://stats.stackexchange.com/questions/70113/cluster-large-boolean-dataset
 
+library(cba)
+
 rockmod1 <- rockCluster(binmatsel, 1, beta = 0.9, theta = 0.99, fun = "dist", funArgs = list(method="binary"), debug = FALSE)
 
 
@@ -119,5 +120,23 @@ plot(sub$longitude, sub$latitude, col=sub$clust)
 
 
 
+#####################################
+###Try converting to graph 
+#####################################
+
+library(igraph)
+
+distmat <- dist(binmatsel, method='binary')
+
+adjmat <- distmat < .75
+
+g  <- graph.adjacency(adjMat)
+
+#first find isolated communities
+dg <- decompose.graph(g) 
+clusters(g)
+
+#Then find communities
+fc <- fastgreedy.community(as.undirected(g))
 
 
