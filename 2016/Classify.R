@@ -128,13 +128,16 @@ library(igraph)
 
 distmat <- dist(binmatsel, method='binary')
 
-adjmat <- distmat < .75
+adjmat <- as.matrix(distmat) < .75
+diag(adjmat) <- FALSE
 
-g  <- graph.adjacency(adjMat)
+g  <- graph.adjacency(adjmat)
 
 #first find isolated communities
 dg <- decompose.graph(g) 
 clusters(g)
+
+g1 <- dg[[1]]
 
 #Then find communities
 fc <- fastgreedy.community(as.undirected(g))
