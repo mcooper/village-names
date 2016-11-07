@@ -1,4 +1,5 @@
 setwd('/Users/matthewcooper/Creativitea/village-names/2016/')
+setwd('D:/Documents and Settings/mcooper/GitHub/village-names/2016')
 
 library(dplyr)
 library(rgdal)
@@ -50,6 +51,9 @@ vills <- vills[ , c('NamE', 'latitude', 'longitude')] %>% unique
 ################
 ###Get 3-grams
 ###############
+
+#Might want to first filter names less than n + 1 characters when dealing with n grams
+#Might also want to vary the number of grams?
 
 getThreeGrams <- function(str){
   len <- nchar(str)
@@ -133,6 +137,24 @@ diag(adjmat) <- FALSE
 
 g  <- graph.adjacency(adjmat)
 
+getGroups <- function(graph, clusterFunc, size){
+  #graph is a graph of toponyms, connected by similar features
+  
+  #clusterFunc is the clustering function.  Can be:
+  #cluster_fast_greedy
+  #cluster_walktrap
+  #cluster_spinglass
+  #cluster_leading_eigen
+  #cluster_edge_betweenness
+  
+  #size is the size of a distinct group that will by analyzed for clusters
+  
+  dg <- decompose.graph(g)
+  
+  df <- 
+  
+}
+
 #first find isolated communities
 dg <- decompose.graph(g) 
 clusters(g)
@@ -140,6 +162,9 @@ clusters(g)
 g1 <- dg[[1]]
 
 #Then find communities
-fc <- fastgreedy.community(as.undirected(g))
+fc <- fastgreedy.community(as.undirected(g1))
 
+df <- data.frame(NamE=fc$name, group=fc$membership)
+
+final <- merge(df, vills, by='NamE') %>% unique
 
