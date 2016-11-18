@@ -8,9 +8,29 @@ library(rgdal)
 ### Read in Data & Prep names
 ##################
 
-vills <- read.delim('ML.txt', stringsAsFactors = F)
+CI <- read.delim('CI.txt', stringsAsFactors = F, header = F)
+ML <- read.delim('ML.txt', stringsAsFactors = F, header = F)
+BF <- read.delim('BF.txt', stringsAsFactors = F, header = F)
+SN <- read.delim('SN.txt', stringsAsFactors = F, header = F)
+GN <- read.delim('GN.txt', stringsAsFactors = F, header = F)
+MR <- read.delim('MR.txt', stringsAsFactors = F, header = F)
+
 x <- c('geonameid','name','asciiname','alternatenames','latitude','longitude','feature_class','feature_code','country_code','cc2','admin1_code','admin2_code','admin3_code','admin4_code','population','elevation','dem','timezone','modification date')
-names(vills) <- x
+
+names(CI) <- x
+CI <- CI[ , c('asciiname', 'latitude', 'longitude', 'feature_class')]
+names(ML) <- x
+ML <- ML[ , c('asciiname', 'latitude', 'longitude', 'feature_class')]
+names(BF) <- x
+BF <- BF[ , c('asciiname', 'latitude', 'longitude', 'feature_class')]
+names(SN) <- x
+SN <- SN[ , c('asciiname', 'latitude', 'longitude', 'feature_class')]
+names(GN) <- x
+GN <- GN[ , c('asciiname', 'latitude', 'longitude', 'feature_class')]
+names(MR) <- x
+MR <- MR[ , c('asciiname', 'latitude', 'longitude', 'feature_class')]
+
+vills <- bind_rows(CI, ML, BF, SN, GN, MR)
 
 #Select villages, cities, towns, etc, leaving out universities, forests, etc
 vills <- vills[vills$feature_class=='P', ]
@@ -101,39 +121,18 @@ spatial_grams <- clustering$gram[clustering$p.value < 0.05]
 
 binmatsel <- binmat[ , colnames(binmat) %in% spatial_grams]
 
-############################
-###Classify Using ROCK Model
-############################
-
-#http://stats.stackexchange.com/questions/70113/cluster-large-boolean-dataset
-
-library(cba)
-
-rockmod1 <- rockCluster(binmatsel, 1, beta = 0.9, theta = 0.99, fun = "dist", funArgs = list(method="binary"), debug = FALSE)
-
-
-vills$clust <- rockmod$cl
-
-multiclust <- table(rockmod$cl)[table(rockmod$cl) > 1]
-
-vills$multiclust <- vills$clust %in% names(multiclust)
-
-sub <- vills[vills$multiclust, ]
-
-plot(sub$longitude, sub$latitude, col=sub$clust)
-
-
-
 #####################################
 ###Try converting to graph 
 #####################################
 
 library(igraph)
 
-distmat <- dist(binmatsel, method='binary')
-
-adjmat <- as.matrix(distmat) < .75
+distmat_space <- dist(vills@coords) < 25000
+distmat_lang <- dist(binmatsel, method='binary')
+adjmat <- as.matrix(distmat_lang) < .75
 diag(adjmat) <- FALSE
+
+distmat <- distmat_space & distmat_lang
 
 g  <- graph.adjacency(adjmat)
 
@@ -151,20 +150,57 @@ getGroups <- function(graph, clusterFunc, size){
   
   dg <- decompose.graph(g)
   
-  df <- 
+  fc <- fastgreedy.community(as.undirected(g))
   
 }
 
 #first find isolated communities
 dg <- decompose.graph(g) 
-clusters(g)
+#clusters(g)
 
 g1 <- dg[[1]]
 
 #Then find communities
 fc <- fastgreedy.community(as.undirected(g1))
 
-df <- data.frame(NamE=fc$name, group=fc$membership)
+c3 <- cluster_label_prop(as.undirected(g1))
 
-final <- merge(df, vills, by='NamE') %>% unique
+c4 <- cluster_leading_eigen(as.undirected(g1))
+
+c5 <- cluster_louvain(as.undirected(g1))
+
+c6 <- cluster_optimal(as.undirected(g1))
+
+c7 <- cluster_spinglass(as.undirected(g1))
+
+c8 <- cluster_walktrap(as.undirected(g1))
+
+df1 <- data.frame(NamE=fc$name, group=fc$membership)
+mg1 <- merge(df1, vills, by='NamE') %>% unique
+plot(mg1$longitude, mg1$latitude, col=mg1$group)
+
+
+for (i in 1:11){
+  plot(mg1$longitude[mg1$group == i], mg1$latitude[mg1$group == i], col=mg1$group[mg1$group == i])
+}
+
+df3 <- data.frame(NamE=c3$name, group=c3$membership)
+mg3 <- merge(df3, vills, by='NamE') %>% unique
+plot(mg3$longitude, mg3$latitude, col=mg3$group)
+
+df4 <- data.frame(NamE=c4$name, group=c4$membership)
+mg4 <- merge(df4, vills, by='NamE') %>% unique
+plot(mg4$longitude, mg4$latitude, col=mg4$group)
+
+df5 <- data.frame(NamE=c5$name, group=c5$membership)
+mg5 <- merge(df5, vills, by='NamE') %>% unique
+plot(mg5$longitude, mg5$latitude, col=mg5$group)
+
+df7 <- data.frame(NamE=c7$name, group=c7$membership)
+mg7 <- merge(df7, vills, by='NamE') %>% unique
+plot(mg7$longitude, mg7$latitude, col=mg7$group)
+
+df8 <- data.frame(NamE=c8$name, group=c8$membership)
+mg8 <- merge(df8, vills, by='NamE') %>% unique
+plot(mg8$longitude, mg8$latitude, col=mg8$group)
 
