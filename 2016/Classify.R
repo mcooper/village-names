@@ -18,22 +18,24 @@ MR <- read.delim('MR.txt', stringsAsFactors = F, header = F)
 x <- c('geonameid','name','asciiname','alternatenames','latitude','longitude','feature_class','feature_code','country_code','cc2','admin1_code','admin2_code','admin3_code','admin4_code','population','elevation','dem','timezone','modification date')
 
 names(CI) <- x
-CI <- CI[ , c('asciiname', 'latitude', 'longitude', 'feature_class')]
+CI <- CI[ , c('geonameid', 'asciiname', 'latitude', 'longitude', 'feature_class')]
 names(ML) <- x
-ML <- ML[ , c('asciiname', 'latitude', 'longitude', 'feature_class')]
+ML <- ML[ , c('geonameid', 'asciiname', 'latitude', 'longitude', 'feature_class')]
 names(BF) <- x
-BF <- BF[ , c('asciiname', 'latitude', 'longitude', 'feature_class')]
+BF <- BF[ , c('geonameid', 'asciiname', 'latitude', 'longitude', 'feature_class')]
 names(SN) <- x
-SN <- SN[ , c('asciiname', 'latitude', 'longitude', 'feature_class')]
+SN <- SN[ , c('geonameid', 'asciiname', 'latitude', 'longitude', 'feature_class')]
 names(GN) <- x
-GN <- GN[ , c('asciiname', 'latitude', 'longitude', 'feature_class')]
+GN <- GN[ , c('geonameid', 'asciiname', 'latitude', 'longitude', 'feature_class')]
 names(MR) <- x
-MR <- MR[ , c('asciiname', 'latitude', 'longitude', 'feature_class')]
+MR <- MR[ , c('geonameid', 'asciiname', 'latitude', 'longitude', 'feature_class')]
 
 vills <- bind_rows(CI, ML, BF, SN, GN, MR)
 
 #Select villages, cities, towns, etc, leaving out universities, forests, etc
 vills <- vills[vills$feature_class=='P', ]
+
+vills <- vills[nchar(vills$asciiname) > 8, ]
 
 indexCapitalize <- function(str, index){
   if (index==1){
@@ -66,7 +68,7 @@ makeLastUpper <- function(str){
 
 vills$NamE <- sapply(vills$asciiname, makeLastUpper)
 
-vills <- vills[ , c('NamE', 'latitude', 'longitude')] %>% unique
+vills <- vills[ , c('geonameid', 'NamE', 'latitude', 'longitude')] %>% unique
 
 ################
 ###Get 3-grams
@@ -88,7 +90,7 @@ threeGrams <- sapply(vills$NamE, getThreeGrams) %>% unlist %>% unique
 
 binmat <- sapply(threeGrams,grepl,vills$NamE)
 
-row.names(binmat) <- vills$NamE
+row.names(binmat) <- vills$geonameid
 
 #######################
 ###Select only Variables with significant spatial clustering
@@ -127,12 +129,15 @@ binmatsel <- binmat[ , colnames(binmat) %in% spatial_grams]
 
 library(igraph)
 
-distmat_space <- dist(vills@coords) < 25000
+distmat_space <- as.matrix(dist(vills@coords)) < 25000
 distmat_lang <- dist(binmatsel, method='binary')
 adjmat <- as.matrix(distmat_lang) < .75
 diag(adjmat) <- FALSE
 
 distmat <- distmat_space & distmat_lang
+
+rm(distmat_space)
+
 
 g  <- graph.adjacency(adjmat)
 
@@ -176,7 +181,7 @@ c7 <- cluster_spinglass(as.undirected(g1))
 c8 <- cluster_walktrap(as.undirected(g1))
 
 df1 <- data.frame(NamE=fc$name, group=fc$membership)
-mg1 <- merge(df1, vills, by='NamE') %>% unique
+mg1 <- merge(df1, vills, by='geonameid') %>% unique
 plot(mg1$longitude, mg1$latitude, col=mg1$group)
 
 
@@ -185,22 +190,22 @@ for (i in 1:11){
 }
 
 df3 <- data.frame(NamE=c3$name, group=c3$membership)
-mg3 <- merge(df3, vills, by='NamE') %>% unique
+mg3 <- merge(df3, vills, by='geonameid') %>% unique
 plot(mg3$longitude, mg3$latitude, col=mg3$group)
 
 df4 <- data.frame(NamE=c4$name, group=c4$membership)
-mg4 <- merge(df4, vills, by='NamE') %>% unique
+mg4 <- merge(df4, vills, by='geonameid') %>% unique
 plot(mg4$longitude, mg4$latitude, col=mg4$group)
 
 df5 <- data.frame(NamE=c5$name, group=c5$membership)
-mg5 <- merge(df5, vills, by='NamE') %>% unique
+mg5 <- merge(df5, vills, by='geonameid') %>% unique
 plot(mg5$longitude, mg5$latitude, col=mg5$group)
 
 df7 <- data.frame(NamE=c7$name, group=c7$membership)
-mg7 <- merge(df7, vills, by='NamE') %>% unique
+mg7 <- merge(df7, vills, by='geonameid') %>% unique
 plot(mg7$longitude, mg7$latitude, col=mg7$group)
 
 df8 <- data.frame(NamE=c8$name, group=c8$membership)
-mg8 <- merge(df8, vills, by='NamE') %>% unique
+mg8 <- merge(df8, vills, by='geonameid') %>% unique
 plot(mg8$longitude, mg8$latitude, col=mg8$group)
 
