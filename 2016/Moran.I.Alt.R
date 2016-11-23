@@ -20,5 +20,5 @@ Moran.I.Alt <- function (gram, binmat, weight, S1, S2, s.sq, na.rm = FALSE, alte
   else 2 * (1 - pv)
   if (alternative == "greater") 
     pv <- 1 - pv
-  data.frame(gram = gram, observed = obs, expected = ei, sd = sdi, p.value = pv)
+  data.frame(gram = gram, observed = obs, expected = ei, sd = sdi, p.value = pv, stringsAsFactors = F)
 }
