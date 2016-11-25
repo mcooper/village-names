@@ -115,6 +115,27 @@ rm(ROWSUM)
 
 source("Moran.I.Alt.R")
 
+########## Test Clustering Algorithms
+
+system.time({
+  clustering <- lapply(X = colnames(binmat)[1:5], FUN = Moran.I.Alt, binmat=binmat, weight=weight, S1=S1, S2=S2, s=s, s.sq=s.sq) %>% bind_rows
+})
+
+library(doParallel)
+no_cores <- 4
+cl <- makeCluster(no_cores)
+
+system.time({
+  clusteringpar <- parLapply(cl, X = colnames(binmat)[1:5], fun = Moran.I.Alt, binmat=binmat, weight=weight, S1=S1, S2=S2, s=s, s.sq=s.sq) %>% bind_rows
+})
+
+
+
+
+
+
+##########
+
 clustering <- lapply(X = colnames(binmat), FUN = Moran.I.Alt, binmat=binmat, weight=weight, S1=S1, S2=S2, s.sq=s.sq) %>% bind_rows
 
 write.csv(clustering, '3-gram MoransI.csv', row.names=F)

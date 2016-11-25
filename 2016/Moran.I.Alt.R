@@ -1,4 +1,4 @@
-Moran.I.Alt <- function (gram, binmat, weight, S1, S2, s.sq, na.rm = FALSE, alternative = "two.sided"){
+Moran.I.Alt <- function (gram, binmat, weight, S1, S2, s.sq, na.rm = FALSE, s=s, alternative = "two.sided"){
   x <- as.numeric(binmat[ ,gram])
   n <- length(x)
   ei <- -1/(n - 1)
