@@ -3,6 +3,7 @@ setwd('D:/Documents and Settings/mcooper/GitHub/village-names/2016')
 
 library(dplyr)
 library(rgdal)
+library(doParallel)
 
 ##################
 ### Read in Data & Prep names
@@ -35,7 +36,7 @@ vills <- bind_rows(CI, ML, BF, SN, GN, MR)
 #Select villages, cities, towns, etc, leaving out universities, forests, etc
 vills <- vills[vills$feature_class=='P', ]
 
-vills <- vills[nchar(vills$asciiname) > 8, ]
+vills <- vills[nchar(vills$asciiname) > 6, ]
 
 indexCapitalize <- function(str, index){
   if (index==1){
@@ -74,7 +75,6 @@ vills <- vills[ , c('geonameid', 'NamE', 'latitude', 'longitude')] %>% unique
 ###Get 3-grams
 ###############
 
-#Might want to first filter names less than n + 1 characters when dealing with n grams
 #Might also want to vary the number of grams?
 
 getThreeGrams <- function(str){
@@ -118,31 +118,30 @@ source("Moran.I.Alt.R")
 ########## Test Clustering Algorithms
 
 system.time({
-  clustering <- lapply(X = colnames(binmat)[1:5], FUN = Moran.I.Alt, binmat=binmat, weight=weight, S1=S1, S2=S2, s=s, s.sq=s.sq) %>% bind_rows
+  clustering <- lapply(X = colnames(binmat), FUN = Moran.I.Alt, binmat=binmat, weight=weight, S1=S1, S2=S2, s=s, s.sq=s.sq) %>% bind_rows
 })
 
-library(doParallel)
-no_cores <- 4
-cl <- makeCluster(no_cores)
-
-system.time({
-  clusteringpar <- parLapply(cl, X = colnames(binmat)[1:5], fun = Moran.I.Alt, binmat=binmat, weight=weight, S1=S1, S2=S2, s=s, s.sq=s.sq) %>% bind_rows
-})
-
-
-
-
-
-
+# no_cores <- detectCores() - 1
+# cl <- makeCluster(no_cores)
+# 
+# system.time({
+# clustering <- parLapply(cl, X = colnames(binmat), fun = Moran.I.Alt, binmat=binmat, weight=weight, S1=S1, S2=S2, s=s, s.sq=s.sq) %>% bind_rows
+# })
+# 
+# stopCluster(cl)
+  
 ##########
 
-clustering <- lapply(X = colnames(binmat), FUN = Moran.I.Alt, binmat=binmat, weight=weight, S1=S1, S2=S2, s.sq=s.sq) %>% bind_rows
+#clustering <- lapply(X = colnames(binmat), FUN = Moran.I.Alt, binmat=binmat, weight=weight, S1=S1, S2=S2, s.sq=s.sq) %>% bind_rows
 
 write.csv(clustering, '3-gram MoransI.csv', row.names=F)
+
+rm(weight)
 
 spatial_grams <- clustering$gram[clustering$p.value < 0.05]
 
 binmatsel <- binmat[ , colnames(binmat) %in% spatial_grams]
+rm(binmat)
 
 #####################################
 ###Try converting to graph 
@@ -156,9 +155,6 @@ adjmat <- as.matrix(distmat_lang) < .75
 diag(adjmat) <- FALSE
 
 distmat <- distmat_space & distmat_lang
-
-rm(distmat_space)
-
 
 g  <- graph.adjacency(adjmat)
 
@@ -203,7 +199,8 @@ c8 <- cluster_walktrap(as.undirected(g1))
 
 df1 <- data.frame(NamE=fc$name, group=fc$membership)
 mg1 <- merge(df1, vills, by='geonameid') %>% unique
-plot(mg1$longitude, mg1$latitude, col=mg1$group)
+write.csv(mg1, 'mg1.csv', row.names = F)
+#plot(mg1$longitude, mg1$latitude, col=mg1$group)
 
 
 for (i in 1:11){
@@ -212,21 +209,26 @@ for (i in 1:11){
 
 df3 <- data.frame(NamE=c3$name, group=c3$membership)
 mg3 <- merge(df3, vills, by='geonameid') %>% unique
-plot(mg3$longitude, mg3$latitude, col=mg3$group)
+write.csv(mg3, 'mg3.csv', row.names = F)
+#plot(mg3$longitude, mg3$latitude, col=mg3$group)
 
 df4 <- data.frame(NamE=c4$name, group=c4$membership)
 mg4 <- merge(df4, vills, by='geonameid') %>% unique
-plot(mg4$longitude, mg4$latitude, col=mg4$group)
+write.csv(mg4, 'mg4.csv', row.names = F)
+#plot(mg4$longitude, mg4$latitude, col=mg4$group)
 
 df5 <- data.frame(NamE=c5$name, group=c5$membership)
 mg5 <- merge(df5, vills, by='geonameid') %>% unique
-plot(mg5$longitude, mg5$latitude, col=mg5$group)
+write.csv(mg5, 'mg5.csv', row.names = F)
+#plot(mg5$longitude, mg5$latitude, col=mg5$group)
 
 df7 <- data.frame(NamE=c7$name, group=c7$membership)
 mg7 <- merge(df7, vills, by='geonameid') %>% unique
-plot(mg7$longitude, mg7$latitude, col=mg7$group)
+write.csv(mg7, 'mg7.csv', row.names = F)
+#plot(mg7$longitude, mg7$latitude, col=mg7$group)
 
 df8 <- data.frame(NamE=c8$name, group=c8$membership)
 mg8 <- merge(df8, vills, by='geonameid') %>% unique
-plot(mg8$longitude, mg8$latitude, col=mg8$group)
+write.csv(mg8, 'mg8.csv', row.names = F)
+#plot(mg8$longitude, mg8$latitude, col=mg8$group)
 
