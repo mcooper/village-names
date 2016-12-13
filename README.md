@@ -13,3 +13,6 @@ The workflow is:
 2. Find all n-grams (in this case 3-grams) that show significant spatial clustering.
 
 3. Using a dataset with latitude, longitude, and a binary presence-absence variable for every village name and n-gram, classify all of the village names using ML.
+
+
+EDIT:  An example of this work is at [mcooper.github.io/vill-names.html](mcooper.github.io/vill-names.html)
