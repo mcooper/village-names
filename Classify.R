@@ -93,6 +93,10 @@ makeLastUpper <- function(str){
   return(newStr)
 }
 
+vills$name <- tolower(vills$name)
+
+vills$name <- gsub("[^[:lower:]]", "", vills$name)
+
 if (opt[["capitalize-ends"]]){
   vills$name <- sapply(vills$name, makeLastUpper)
 }
