@@ -147,7 +147,7 @@ S2 <- sum((apply(weight, 1, sum) + apply(weight, 2, sum))^2)
 
 rm(ROWSUM)
 
-source("../scripts/Moran.I.Alt.R")
+source("Moran.I.Alt.R")
 
 clustering <- lapply(X = colnames(binmat), FUN = Moran.I.Alt, binmat=binmat, weight=weight, S1=S1, S2=S2, s=s, s.sq=s.sq) %>% bind_rows
 
