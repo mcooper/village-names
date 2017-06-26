@@ -2,6 +2,7 @@ suppressMessages(suppressWarnings(library(dplyr, quietly=T, verbose=F)))
 suppressMessages(suppressWarnings(library(rgdal, quietly=T, verbose=F)))
 suppressMessages(suppressWarnings(library(optparse, quietly=T, verbose=F)))
 suppressMessages(suppressWarnings(library(igraph, quietly=T, verbose=F)))
+suppressMessages(suppressWarnings(library(pbapply, quietly=T, verbose=F)))
 
 option_list = list(
   make_option(c("-f", "--file"), 
@@ -53,6 +54,7 @@ opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
 options(stringsAsFactors = F)
+pboptions(type="txt")
 
 ##################
 ### Read in Data & Prep names
@@ -111,7 +113,7 @@ getNGrams <- function(str, n){
   mapply(substr, start=1:(len-(n-1)), stop=n:len, x=str)
 }
 
-nGrams <- sapply(vills$name, getNGrams, n=10) %>% 
+nGrams <- pbsapply(vills$name, getNGrams, n=opt[['gram-size']]) %>% 
   unlist %>% 
   unique
 
@@ -120,7 +122,7 @@ nGrams <- sapply(vills$name, getNGrams, n=10) %>%
 ######################
 cat("\nGet Binary Matrix\n\n")
 
-binmat <- sapply(nGrams,grepl,vills$name)
+binmat <- pbsapply(nGrams,grepl,vills$name)
 
 row.names(binmat) <- vills$id
 
@@ -149,7 +151,7 @@ rm(ROWSUM)
 
 source("Moran.I.Alt.R")
 
-clustering <- lapply(X = colnames(binmat), FUN = Moran.I.Alt, binmat=binmat, weight=weight, S1=S1, S2=S2, s=s, s.sq=s.sq) %>% bind_rows
+clustering <- pblapply(X = colnames(binmat), FUN = Moran.I.Alt, binmat=binmat, weight=weight, S1=S1, S2=S2, s=s, s.sq=s.sq) %>% bind_rows
 
 write.csv(clustering, '3-gram MoransI.csv', row.names=F)
 
@@ -184,8 +186,18 @@ g1 <- dg[[1]]
 cat("\nFind All Communities\n\n")
 fc <- fastgreedy.community(as.undirected(g1))
 
-df1 <- data.frame(name=fc$name, group=fc$membership)
+df1 <- data.frame(id=fc$name, group=fc$membership)
 mg1 <- merge(df1, vills, by='id') %>% unique
+
+
+# wt <- cluster_walktrap(as.undirected(g1))
+# sp <- cluster_spinglass(as.undirected(g1))
+# im <- cluster_infomap(as.undirected(g1))
+# op <- cluster_optimal(as.undirected(g1))
+# eb <- cluster_edge_betweenness(as.undirected(g1))
+# lp <- cluster_label_prop(as.undirected(g1))
+# le <- cluster_leading_eigen(as.undirected(g1))
+# lo <- cluster_louvain(as.undirected(g1))
 
 write.csv(mg1, opt[['out']], row.names = F)
 
