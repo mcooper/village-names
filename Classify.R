@@ -155,6 +155,8 @@ clustering <- pblapply(X = colnames(binmat), FUN = Moran.I.Alt, binmat=binmat, w
 
 write.csv(clustering, '3-gram MoransI.csv', row.names=F)
 
+vills <- spTransform(vills, CRS("+proj=longlat +datum=WGS84"))
+
 rm(weight)
 
 spatial_grams <- clustering$gram[clustering$p.value < 0.05]
