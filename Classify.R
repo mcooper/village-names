@@ -40,12 +40,18 @@ option_list = list(
               default=10000,
               help="distance between villages (in meters) to include in graph",
               metavar="integer"),
-  make_option(c("j", "--jaccard"),
+  make_option(c("-j", "--jaccard"),
               type="double",
               default=0.75,
               help="the cutoff in determining of two toponyms share a lexical affiliation.  See ?dist and read the docs where method='binary'",
-              metavar='double')
+              metavar='double'),
+  make_option(c("-s", "--size"),
+              type="integer",
+              default=nrow(vills),
+              help="the number of toponyms to sample from full dataset",
+              metavar='integer')
 )
+
 ##To do:
 # Add mapping output option
 # Do recursive cluster detection
@@ -56,15 +62,28 @@ opt = parse_args(opt_parser)
 options(stringsAsFactors = F)
 pboptions(type="txt")
 
+
+#If not running on *nix
+opt <- list(file='D://Documents and Settings/mcooper/Google Drive/Creativitea/IberiaAscii.csv',
+            out='D://Documents and Settings/mcooper/Google Drive/Creativitea/IberiaAscii_out.csv',
+            length=6,
+            `capitalize-ends`=TRUE,
+            `gram-size`=3,
+            buffer=10000,
+            jaccard=0.75,
+            size=10000)
+
 ##################
 ### Read in Data & Prep names
 ##################
 cat("\nRead in Data & Prep names\n\n")
 
-vills <- read.csv(opt[['file']])
+vills <- read.csv(opt[['file']], encoding="UTF-8")
 vills$id <- 1:nrow(vills)
 
 vills <- vills[nchar(vills$name) > opt[['length']], ]
+
+vills <- vills[sample(seq(1, nrow(vills)), size=opt[['size']], replace = F), ]
 
 indexCapitalize <- function(str, index){
   if (index==1){
@@ -95,12 +114,23 @@ makeLastUpper <- function(str){
   return(newStr)
 }
 
+makeFirstUpper <- function(str){
+  newStr <- indexCapitalize(str, 1)
+  ind <- c(gregexpr(pattern=' ', str)[[1]]+1)
+  for (i in ind){
+    newStr <- indexCapitalize(newStr, i)
+  }
+  return(newStr)
+}
+
+
 vills$name <- tolower(vills$name)
 
-vills$name <- gsub("[^[:lower:]]", "", vills$name)
+vills$name <- gsub("[^[:lower:] ]", "", vills$name)
 
 if (opt[["capitalize-ends"]]){
   vills$name <- sapply(vills$name, makeLastUpper)
+  vills$name <- sapply(vills$name, makeFirstUpper)
 }
 
 ################
