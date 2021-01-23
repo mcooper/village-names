@@ -8,7 +8,7 @@ library(tokenizers)
 library(pbapply)
 library(rgdal)
 
-IPA <- 'C://Users/matt/village-names/ipa.xlsx'
+IPA <- '~/village-names/ipa.xlsx'
 
 read_geonames_file <- function(filename, 
                                featureclass=c('P', 'V', 'H', 'T'),

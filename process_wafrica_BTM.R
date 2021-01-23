@@ -1,6 +1,6 @@
-source('C://Users/matt/village-names/Utils.R')
+source('~/village-names/Utils.R')
 
-setwd('G://My Drive/village-names/wafrica')
+setwd('~/gd/village-names/wafrica')
 
 #################################
 # Set up Parameters
@@ -50,45 +50,42 @@ vills <- bind_rows(read_geonames_file('BF.txt') %>%
          latitude < 17.138959, 
          longitude > -17.696228, 
          longitude < 18.544922) %>%
-  st_as_sf(coords=c('longitude', 'latitude'), crs=4326) %>%
+  st_as_sf(coords=c('longitude', 'latitude'), crs=4326, remove=F) %>%
   st_transform(proj)
 
-#####################################
-# Make Raster and summarize toponyms
-#####################################
-r <- make_raster(extent(vills), n=10000, proj)
-
-vills$rcode <- extract(r, vills %>% st_coordinates() %>% SpatialPoints)
-
-rgrams <- vills %>%
-  st_drop_geometry() %>%
-  group_by(rcode) %>%
-  summarize(rtext = paste0(name, collapse=' '))
+vills <- bind_cols(vills %>% st_drop_geometry,
+                   vills %>% st_coordinates %>% data.frame)
 
 #################################
-#Get up to 5000 tokens
+#Get tokens
 #################################
-grams <- tokenize_character_shingles(paste0(rgrams$rtext, collapse=' '), n=3, lowercase = F, strip_non_alphanum = F)[[1]]
-grams <- grams[!grepl(" ", grams)]
+grams <- tokenize_character_shingles(vills$name, n=3, lowercase = F, strip_non_alphanum = F)
+grams <- lapply(grams, FUN=function(x) x[!grepl(" |\\-|\\.", x)])
 
-t <- table(grams)
+t <- table(unlist(grams))
 
-grams <- names(t)[order(t, decreasing = T)][1:5000]
+grams <- names(t)[t > 10]
 
-######################################
-# Make first occurence matrix (binmat)
-######################################
-binmat <- pbsapply(grams,grepl,rgrams$rtext)
-row.names(binmat) <- rgrams$rcode
+##############################
+# Run Moran's I on every gram
+###############################
+
+grams <- data.frame(grams)
+grams$moranp <- pbsapply(X=grams$grams[1:10], 
+                        FUN=function(x){
+                          #https://github.com/mcooper/moranfast
+                          moranfast::moranfast(grepl(x, vills$name), vills$X, vills$Y)$p.value
+                        })
+
+start <- Sys.time()
+mf <- moranfast::moranfast(grepl('yea', vills$name), vills$X, vills$Y)
+end <- Sys.time()
+
 
 ####################################################
 # Make first distmat and conduct Morans I
 ####################################################
-rpts <- rasterToPoints(r) %>%
-  data.frame %>%
-  filter(layer %in% rgrams$rcode)
-
-distmat <- as.matrix(dist(rpts[ , c('x', 'y')]))
+distmat <- as.matrix(dist(vills[ , c('X', 'Y')]))
 
 clustering <- run_moran(distmat, binmat)
 
@@ -127,6 +124,5 @@ write.csv(binmat, 'occurence_mat.csv')
 write.csv(distmat, 'distmat.csv')
 write.csv(distmat_r, 'distmat_r.csv')
 write.csv(distmat_q, 'distmat_q.csv')
-
 
 
