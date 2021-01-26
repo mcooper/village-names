@@ -69,18 +69,24 @@ grams <- names(t)[t > 10]
 ##############################
 # Run Moran's I on every gram
 ###############################
+library(doParallel)
 
-grams <- data.frame(grams)
-grams$moranp <- pbsapply(X=grams$grams[1:10], 
-                        FUN=function(x){
-                          #https://github.com/mcooper/moranfast
-                          moranfast::moranfast(grepl(x, vills$name), vills$X, vills$Y)$p.value
-                        })
+cl <- makeCluster(32, outfile = '')
+registerDoParallel(cl)
 
-start <- Sys.time()
-mf <- moranfast::moranfast(grepl('yea', vills$name), vills$X, vills$Y)
-end <- Sys.time()
+all <- foreach(g=grams, .packages=c('moranfast'), .combine=bind_rows) %dopar% {
+  cat(round(which(grams == g)/length(grams)*100, 4), 'percent done\n') 
+  res <- moranfast(grepl(g, vills$name), vills$X, vills$Y)
+  res$gram <- g
+  write.csv(res, paste0('~/gd/village-names/wafrica/', 
+                        paste0(sample(c(LETTERS, letters, 0:9), 8), collapse=''), 'XX'), 
+            row.names=F)
+  res
+}
+write.csv(res, '~/gd/village-names/wafrica/final_moran.csv', row.names=F)
 
+system('~/telegram.sh "Done with moran processing"')
+system('sudo poweroff')
 
 ####################################################
 # Make first distmat and conduct Morans I
