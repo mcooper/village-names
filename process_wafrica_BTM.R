@@ -78,7 +78,7 @@ all <- foreach(g=grams, .packages=c('moranfast'), .combine=bind_rows) %dopar% {
   cat(round(which(grams == g)/length(grams)*100, 4), 'percent done\n') 
   res <- moranfast(grepl(g, vills$name), vills$X, vills$Y)
   res$gram <- g
-  write.csv(res, paste0('~/gd/village-names/wafrica/', 
+  write.csv(res, paste0('~/gd/village-names/wafrica/moran/', 
                         paste0(sample(c(LETTERS, letters, 0:9), 8), collapse=''), 'XX'), 
             row.names=F)
   res
@@ -88,47 +88,20 @@ write.csv(res, '~/gd/village-names/wafrica/final_moran.csv', row.names=F)
 system('~/telegram.sh "Done with moran processing"')
 system('sudo poweroff')
 
-####################################################
-# Make first distmat and conduct Morans I
-####################################################
-distmat <- as.matrix(dist(vills[ , c('X', 'Y')]))
+###################################
+# Read in results
+###################################
 
-clustering <- run_moran(distmat, binmat)
+moran <- list.files('~/gd/village-names/wafrica/moran', full.names=T) %>%
+  lapply(function(x){read.csv(x, colClasses=c("numeric", "numeric", "numeric","numeric","character"))}) %>%
+  bind_rows
 
-#########################################################
-# Get new spatially autocorrelated ngrams (p < 0.01)
-#
-# Calculate new binmat and distmat
-###########################################################
+gramdf <- data.frame(gram=names(t), count=as.vector(t))
 
-newgrams <- clustering$gram[order(clustering$observed, decreasing = T)][1:1000]
+moran <- merge(moran, gramdf, all.x=T, all.y=F)
 
-#plot(r %in% row.names(binmat)[binmat[ , 'akt']])
+write.csv(moran, 'moran_results.csv', row.names=F)
+write.csv(vills, 'villages.csv', row.names=F)
 
-binmat <- pbsapply(newgrams, grepl, rgrams$rtext)
-row.names(binmat) <- rgrams$rcode
-
-binmat <- binmat[rowSums(binmat) > 0, ]
-
-rpts <- rasterToPoints(r) %>%
-  data.frame %>%
-  filter(layer %in% row.names(binmat))
-
-distmat <- as.matrix(dist(rpts[ , c('x', 'y')]))
-
-rownames(distmat) <- rpts$layer
-colnames(distmat) <- rpts$layer
-
-mn <- min(distmat[distmat != 0]) + 0.1 #add a bit for floating point issues
-distmat_r <- distmat <= mn
-
-mn2 <- min(distmat[distmat > mn]) + 5
-distmat_q <- distmat <= mn2
-
-writeRaster(r, 'reference_grid.tif', format='GTiff', overwrite=T)
-write.csv(binmat, 'occurence_mat.csv')
-write.csv(distmat, 'distmat.csv')
-write.csv(distmat_r, 'distmat_r.csv')
-write.csv(distmat_q, 'distmat_q.csv')
 
 
